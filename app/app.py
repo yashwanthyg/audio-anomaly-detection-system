@@ -10,9 +10,13 @@ import streamlit as st
 from config import CONFIG
 from detector import build_model, detect
 from processing import clean_text, extract_features
-from realtime import result_queue, start_stream, stop_stream
 from transcription import load_model, transcribe
 
+try:
+    from realtime import result_queue, start_stream, stop_stream
+    REALTIME_AVAILABLE = True
+except Exception:
+    REALTIME_AVAILABLE = False
 logger = logging.getLogger(__name__)
 
 
@@ -117,26 +121,31 @@ def main():
     model = build_model(CONFIG["contamination"])
 
     # ── Real-Time Monitoring ──
-    st.header("⚡ Real-Time Monitoring")
+    if REALTIME_AVAILABLE:
+        st.header("⚡ Real-Time Monitoring")
 
-    if "streaming" not in st.session_state:
-        st.session_state.streaming = False
+        if "stream" not in st.session_state:
+            st.session_state.stream = None
 
-    col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
-    with col1:
-        if st.button("▶️ Start Monitoring"):
-            start_stream(model)
-            st.session_state.streaming = True
-            st.session_state.live_data = None
+        with col1:
+            if st.button("▶️ Start Monitoring"):
+                st.session_state.stream = start_stream(model)
+                st.success("Real-time monitoring started")
 
-    with col2:
-        if st.button("⏹️ Stop Monitoring"):
-            stop_stream()
-            st.session_state.streaming = False
+        with col2:
+            if st.button("⏹️ Stop Monitoring"):
+                if st.session_state.stream:
+                    stop_stream(st.session_state.stream)
+                    st.session_state.stream = None
+                    st.warning("Monitoring stopped")
+    else:
+        st.info("Real-time monitoring is available only in local environment.")
 
-    if st.session_state.streaming:
-        _render_live_section()
+    if REALTIME_AVAILABLE:
+        while not result_queue.empty():
+            st.session_state.live_data = result_queue.get()
 
     # ── File / Mic Input ──
     st.header("🎧 Choose Input Method")
