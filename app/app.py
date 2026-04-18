@@ -109,6 +109,15 @@ def _render_live_section() -> None:
 
 
 def main():
+    # Initialize session state
+    if "streaming" not in st.session_state:
+        st.session_state.streaming = False
+
+    if "stream" not in st.session_state:
+        st.session_state.stream = None
+
+    if "live_data" not in st.session_state:
+        st.session_state.live_data = None
     """Run the Audio Anomaly Detection dashboard."""
     st.title("🎙️ Audio Anomaly Detection System")
 
